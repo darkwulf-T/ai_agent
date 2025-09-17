@@ -32,7 +32,22 @@ def main():
         types.Content(role="user", parts=[types.Part(text=sys.argv[1])]),
     ]
 
-    generate_content(client, messages, is_verbose)
+    i = 0
+    while True:
+        i += 1
+        if i > MAX_ITERS:
+            print(f"Maximum iterations ({MAX_ITERS}) reached.")
+            sys.exit(1)
+        try:
+            answer = generate_content(client, messages, is_verbose)
+            if answer != None:
+                print("Final response:")
+                print(answer)
+                break
+
+        except Exception as e:
+            print(f"Error: {e}")
+
 
 def generate_content(client, messages, is_verbose):
     response = client.models.generate_content(
@@ -46,6 +61,11 @@ def generate_content(client, messages, is_verbose):
         print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
         print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
     
+    if response.candidates:
+        for candidate in response.candidates:
+            function_call_content = candidate.content
+            messages.append(function_call_content)
+
     if not response.function_calls:
         return response.text 
     
@@ -63,6 +83,8 @@ def generate_content(client, messages, is_verbose):
 
     if not function_responses:
         raise Exception("no function responses generated, exiting.")
+    
+    messages.append(types.Content(role="user", parts=function_responses))
 
 
 
